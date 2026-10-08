@@ -6,7 +6,6 @@
  */
 
 import {
-  SCHEMES as SEED_SCHEMES,
   getAllSchemes,
   getSchemeById,
   getFeaturedSchemes,

@@ -1198,12 +1198,6 @@ export const getFeaturedSchemes = () => {
   return [...all].sort((a, b) => b.viewCount - a.viewCount).slice(0, 6);
 };
 
-/** Get all unique categories */
-export const getCategories = () => {
-  const all = getAllSchemes();
-  return [...new Set(all.map(s => s.category))];
-};
-
 /** Filter schemes */
 export const filterSchemes = ({ category, search, page = 1, limit = 12 } = {}) => {
   const all = getAllSchemes();

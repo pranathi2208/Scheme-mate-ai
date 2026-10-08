@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import {
   Menu, X, ChevronDown, Globe, User, BookMarked,
-  LogOut, Settings, MessageSquare, Search,
+  LogOut, MessageSquare,
 } from 'lucide-react';
 import i18n from '../../i18n/i18n';
 
