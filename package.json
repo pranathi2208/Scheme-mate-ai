@@ -1,0 +1,11 @@
+{
+  "name": "schememate-ai",
+  "version": "1.0.0",
+  "description": "SchemeMate AI - Prototype for discovering government schemes (no database, frontend-only)",
+  "scripts": {
+    "dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "preview": "cd client && npm run preview",
+    "install-all": "npm install && cd client && npm install"
+  }
+}
