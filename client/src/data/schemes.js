@@ -1158,20 +1158,56 @@ export const SCHEMES = [
   },
 ];
 
+// ── localStorage-backed scheme management ──────────────────────
+// SCHEMES array above is the seed data. Admin CRUD operations
+// persist changes to localStorage so they survive page reloads.
+
+const SCHEMES_STORAGE_KEY = 'sm_schemes';
+
+/** Seed localStorage from the hardcoded SCHEMES array if empty */
+const initSchemes = () => {
+  try {
+    const stored = localStorage.getItem(SCHEMES_STORAGE_KEY);
+    if (!stored) {
+      localStorage.setItem(SCHEMES_STORAGE_KEY, JSON.stringify(SCHEMES));
+      return [...SCHEMES];
+    }
+    return JSON.parse(stored);
+  } catch {
+    return [...SCHEMES];
+  }
+};
+
+/** Get all schemes from localStorage (seeded on first call) */
+export const getAllSchemes = () => initSchemes();
+
+/** Persist the full scheme array to localStorage */
+const persistSchemes = (schemes) => {
+  try { localStorage.setItem(SCHEMES_STORAGE_KEY, JSON.stringify(schemes)); } catch { /* ignore */ }
+};
+
 /** Get scheme by id or slug */
-export const getSchemeById = (idOrSlug) =>
-  SCHEMES.find(s => s.id === idOrSlug || s.slug === idOrSlug) || null;
+export const getSchemeById = (idOrSlug) => {
+  const all = getAllSchemes();
+  return all.find(s => s.id === idOrSlug || s.slug === idOrSlug) || null;
+};
 
 /** Get featured schemes (top 6 by viewCount) */
-export const getFeaturedSchemes = () =>
-  [...SCHEMES].sort((a, b) => b.viewCount - a.viewCount).slice(0, 6);
+export const getFeaturedSchemes = () => {
+  const all = getAllSchemes();
+  return [...all].sort((a, b) => b.viewCount - a.viewCount).slice(0, 6);
+};
 
 /** Get all unique categories */
-export const getCategories = () => [...new Set(SCHEMES.map(s => s.category))];
+export const getCategories = () => {
+  const all = getAllSchemes();
+  return [...new Set(all.map(s => s.category))];
+};
 
 /** Filter schemes */
 export const filterSchemes = ({ category, search, page = 1, limit = 12 } = {}) => {
-  let results = SCHEMES.filter(s => s.status === 'active');
+  const all = getAllSchemes();
+  let results = all.filter(s => s.status === 'active');
 
   if (category) {
     results = results.filter(s => s.category === category);
@@ -1183,7 +1219,7 @@ export const filterSchemes = ({ category, search, page = 1, limit = 12 } = {}) =
       s.name.toLowerCase().includes(q) ||
       s.shortDescription.toLowerCase().includes(q) ||
       s.description.toLowerCase().includes(q) ||
-      s.tags.some(t => t.includes(q)) ||
+      (s.tags && s.tags.some(t => t.includes(q))) ||
       s.department.toLowerCase().includes(q)
     );
   }
@@ -1194,4 +1230,69 @@ export const filterSchemes = ({ category, search, page = 1, limit = 12 } = {}) =
   const schemes = results.slice(start, start + limit);
 
   return { schemes, total, pages, page };
+};
+
+// ── Admin CRUD ────────────────────────────────────────────────
+
+/** Create a new scheme and persist to localStorage */
+export const createScheme = (data) => {
+  const all = getAllSchemes();
+  const id = `custom_${Date.now()}`;
+  const slug = (data.name || 'scheme')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .substring(0, 100);
+  const newScheme = {
+    id,
+    slug,
+    name: data.name || '',
+    department: data.department || '',
+    ministry: data.ministry || '',
+    category: data.category || 'other',
+    fundingType: data.fundingType || 'central',
+    shortDescription: data.shortDescription || '',
+    description: data.description || '',
+    mainBenefit: data.mainBenefit || '',
+    benefits: data.benefits || [],
+    eligibilityCriteria: data.eligibilityCriteria || [],
+    requiredDocuments: data.requiredDocuments || [],
+    applicationProcess: data.applicationProcess || '',
+    applicationMode: data.applicationMode || 'both',
+    whereToApply: data.whereToApply || '',
+    officialUrl: data.officialUrl || '',
+    helplineNumber: data.helplineNumber || '',
+    targetGroups: data.targetGroups || [],
+    status: data.status || 'active',
+    eligibility: data.eligibility || { gender: 'all', states: [], categories: [] },
+    tags: data.tags || [],
+    viewCount: 0,
+  };
+  persistSchemes([...all, newScheme]);
+  return newScheme;
+};
+
+/** Update an existing scheme by id */
+export const updateScheme = (id, data) => {
+  const all = getAllSchemes();
+  const idx = all.findIndex(s => s.id === id);
+  if (idx === -1) return null;
+  const updated = { ...all[idx], ...data, id: all[idx].id };
+  all[idx] = updated;
+  persistSchemes(all);
+  return updated;
+};
+
+/** Delete a scheme by id (removes from localStorage) */
+export const deleteScheme = (id) => {
+  const all = getAllSchemes();
+  const filtered = all.filter(s => s.id !== id);
+  persistSchemes(filtered);
+  return filtered;
+};
+
+/** Reset schemes back to seed data (removes all admin changes) */
+export const resetSchemes = () => {
+  localStorage.removeItem(SCHEMES_STORAGE_KEY);
+  return getAllSchemes();
 };

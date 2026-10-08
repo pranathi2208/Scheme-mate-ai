@@ -6,10 +6,15 @@
  */
 
 import {
-  SCHEMES,
+  SCHEMES as SEED_SCHEMES,
+  getAllSchemes,
   getSchemeById,
   getFeaturedSchemes,
   filterSchemes,
+  createScheme,
+  updateScheme,
+  deleteScheme,
+  resetSchemes,
 } from '../data/schemes';
 
 // ── Storage keys ─────────────────────────────────────────────
@@ -154,7 +159,7 @@ export const matchService = {
     if (!profile) return { total: 0, results: { all: [], highlyRelevant: [], relevant: [], possiblyRelevant: [] } };
 
     const matched = [];
-    for (const scheme of SCHEMES) {
+    for (const scheme of getAllSchemes()) {
       if (scheme.status !== 'active') continue;
       const m = matchScheme(profile, scheme);
       if (m.isMatch) {
@@ -252,7 +257,7 @@ export const savedService = {
 };
 
 // ── Schemes (re-export helpers for page use) ──────────────────
-export { SCHEMES, getSchemeById, getFeaturedSchemes, filterSchemes };
+export { getAllSchemes, getSchemeById, getFeaturedSchemes, filterSchemes, createScheme, updateScheme, deleteScheme, resetSchemes };
 
 // ── Assistant (rule-based, no backend) ───────────────────────
 const detectIntent = (msg) => {
@@ -290,7 +295,7 @@ export const assistantService = {
         };
 
       case 'farmer': {
-        const s = SCHEMES.filter(sc => sc.eligibility?.isFarmerRequired || sc.targetGroups?.includes('farmers')).slice(0, 5);
+        const s = getAllSchemes().filter(sc => sc.eligibility?.isFarmerRequired || sc.targetGroups?.includes('farmers')).slice(0, 5);
         return {
           message: `Here are key schemes for **farmers**:\n\n${schemeList(s)}\n\nClick any scheme to see full details, documents, and how to apply.\n\n⚠️ *Confirm official eligibility with the relevant department.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -299,7 +304,7 @@ export const assistantService = {
       }
 
       case 'student': {
-        const s = SCHEMES.filter(sc => sc.eligibility?.isStudentRequired || sc.targetGroups?.includes('students')).slice(0, 5);
+        const s = getAllSchemes().filter(sc => sc.eligibility?.isStudentRequired || sc.targetGroups?.includes('students')).slice(0, 5);
         return {
           message: `Here are schemes for **students**:\n\n${schemeList(s)}\n\nThese scholarships cover tuition, hostel, and living expenses for eligible students.\n\n⚠️ *Verify eligibility on official portals.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -308,7 +313,7 @@ export const assistantService = {
       }
 
       case 'women': {
-        const s = SCHEMES.filter(sc => sc.targetGroups?.includes('women') || sc.eligibility?.gender === 'female').slice(0, 5);
+        const s = getAllSchemes().filter(sc => sc.targetGroups?.includes('women') || sc.eligibility?.gender === 'female').slice(0, 5);
         return {
           message: `Here are schemes specially for **women**:\n\n${schemeList(s)}\n\nThese include maternity benefits, LPG connections, savings schemes, and business loans.\n\n⚠️ *Always confirm eligibility with the relevant authority.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -317,7 +322,7 @@ export const assistantService = {
       }
 
       case 'health': {
-        const s = SCHEMES.filter(sc => sc.category === 'healthcare').slice(0, 4);
+        const s = getAllSchemes().filter(sc => sc.category === 'healthcare').slice(0, 4);
         return {
           message: `Here are **healthcare schemes**:\n\n${schemeList(s)}\n\nAyushman Bharat (PM-JAY) is the most comprehensive — it covers hospitalisation up to ₹5 lakh/year.\n\n⚠️ *Eligibility depends on SECC 2011 data or state-level criteria.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -326,7 +331,7 @@ export const assistantService = {
       }
 
       case 'housing': {
-        const s = SCHEMES.filter(sc => sc.category === 'housing').slice(0, 4);
+        const s = getAllSchemes().filter(sc => sc.category === 'housing').slice(0, 4);
         return {
           message: `Here are **housing schemes**:\n\n${schemeList(s)}\n\nPMAY-Gramin offers ₹1.2 lakh for rural families. PMAY-Urban offers interest subsidy on home loans.\n\n⚠️ *Check official portals for current status.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -335,7 +340,7 @@ export const assistantService = {
       }
 
       case 'disability': {
-        const s = SCHEMES.filter(sc => sc.eligibility?.hasDisabilityRequired || sc.targetGroups?.includes('disabled')).slice(0, 4);
+        const s = getAllSchemes().filter(sc => sc.eligibility?.hasDisabilityRequired || sc.targetGroups?.includes('disabled')).slice(0, 4);
         return {
           message: `Here are schemes for **persons with disabilities**:\n\n${schemeList(s)}\n\n**IGNDPS** provides ₹300/month pension for severe disabilities. A disability certificate (80%+) is needed.\n\n⚠️ *Confirm with District Social Welfare Officer.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -344,7 +349,7 @@ export const assistantService = {
       }
 
       case 'senior': {
-        const s = SCHEMES.filter(sc => sc.eligibility?.isSeniorCitizenRequired || sc.targetGroups?.includes('senior_citizens')).slice(0, 4);
+        const s = getAllSchemes().filter(sc => sc.eligibility?.isSeniorCitizenRequired || sc.targetGroups?.includes('senior_citizens')).slice(0, 4);
         return {
           message: `Here are schemes for **senior citizens (60+)**:\n\n${schemeList(s)}\n\n**IGNOAPS** gives ₹200-500/month pension. Many states add their own top-up on top.\n\n⚠️ *Apply at Gram Panchayat or Urban Local Body.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -353,7 +358,7 @@ export const assistantService = {
       }
 
       case 'skill': {
-        const s = SCHEMES.filter(sc => sc.category === 'skill_development').slice(0, 3);
+        const s = getAllSchemes().filter(sc => sc.category === 'skill_development').slice(0, 3);
         return {
           message: `Here are **skill development schemes**:\n\n${schemeList(s)}\n\n**PMKVY** is the flagship scheme — free 3-12 month training with government certificate and monetary reward.\n\n⚠️ *Find nearest centre at skillindia.gov.in.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -362,7 +367,7 @@ export const assistantService = {
       }
 
       case 'business': {
-        const s = SCHEMES.filter(sc => sc.category === 'entrepreneurship').slice(0, 3);
+        const s = getAllSchemes().filter(sc => sc.category === 'entrepreneurship').slice(0, 3);
         return {
           message: `Here are **business & loan schemes**:\n\n${schemeList(s)}\n\n**PM MUDRA Yojana** gives loans up to ₹10 lakh without collateral. **Stand Up India** gives ₹10 lakh–₹1 crore for SC/ST and women.\n\n⚠️ *Apply at any scheduled commercial bank.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -371,7 +376,7 @@ export const assistantService = {
       }
 
       case 'bpl': {
-        const s = SCHEMES.filter(sc => sc.eligibility?.isBPLRequired || sc.targetGroups?.includes('bpl_families')).slice(0, 5);
+        const s = getAllSchemes().filter(sc => sc.eligibility?.isBPLRequired || sc.targetGroups?.includes('bpl_families')).slice(0, 5);
         return {
           message: `Here are schemes for **BPL (Below Poverty Line) families**:\n\n${schemeList(s)}\n\nHaving a BPL card or being in SECC 2011 data unlocks many central government schemes.\n\n⚠️ *Confirm with your local Gram Panchayat or Urban Local Body.*`,
           schemes: s.map(sc => ({ id: sc.id, slug: sc.slug, name: sc.name })),
@@ -421,7 +426,7 @@ export const assistantService = {
 
       default:
         return {
-          message: `I can help you find government schemes! Here are some things you can ask me:\n\n• "Show me farmer schemes"\n• "What healthcare schemes are available?"\n• "What documents do I need?"\n• "How do I apply for Ayushman Bharat?"\n• "Show housing schemes"\n\nOr explore all ${SCHEMES.length} schemes in the Explore section.`,
+          message: `I can help you find government schemes! Here are some things you can ask me:\n\n• "Show me farmer schemes"\n• "What healthcare schemes are available?"\n• "What documents do I need?"\n• "How do I apply for Ayushman Bharat?"\n• "Show housing schemes"\n\nOr explore all ${getAllSchemes().length} schemes in the Explore section.`,
           suggestions: ['Show farmer schemes', 'Healthcare schemes', 'Student scholarships', 'Business loans'],
         };
     }
